@@ -2,56 +2,44 @@
 #include <stdlib.h>
 #include <mpi.h>
 
-void arrangeItems(int arr[], int arr1[], int k, int n)
-{
-    int temp = 0;
-    int i = 0;
-    int j = 0;
+#define ARRAY_SIZE 100  // Define el tamaño del arreglo como constante
 
-    for (i = k; i < n - 1; i++) {
+void simpleSort(int arr[], int n) {
+    int temp, i, j;
+    for (i = 0; i < n - 1; i++) {
         for (j = i + 1; j < n; j++) {
-            if (arr1[i] > arr1[j]) {
-                temp = arr1[i];
-                arr1[i] = arr1[j];
-                arr1[j] = temp;
-
-                temp = (arr[i] % 10);
-                arr[i] = (arr[j] % 10);
+            if (arr[i] > arr[j]) {
+                temp = arr[i];
+                arr[i] = arr[j];
                 arr[j] = temp;
             }
         }
     }
 }
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]) {
     int rank, size;
-    int i, j, c, t, k, n, max, len, maxd, temp;
+    int i;
 
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     MPI_Comm_size(MPI_COMM_WORLD, &size);
 
-    if (rank == 0) {
-        printf("Enter the number of elements to sort: ");
-        scanf("%d", &len);
-    }
-
-    MPI_Bcast(&len, 1, MPI_INT, 0, MPI_COMM_WORLD);
-
+    int len = ARRAY_SIZE;
     int *arr = (int *)malloc(len * sizeof(int));
     int *arr1 = (int *)malloc(len * sizeof(int));
 
-    srand(rank); // Seed rand() with process rank for different random values
+    srand(rank + time(NULL));  // Semilla para rand() con el rango del proceso para diferentes valores aleatorios
 
-    // Automatically fill the array with random values
+    // Llenar automáticamente el array con valores aleatorios
     for (i = 0; i < len; i++) {
-        arr[i] = rand() % 100; // Generate a random number between 0 and 99
+        arr[i] = rand() % 100;  // Generar un número aleatorio entre 0 y 99
     }
 
     printf("Process %d - Unsorted Array:\n", rank);
-    for (i = 0; i < len; i++)
+    for (i = 0; i < len; i++) {
         printf("%d ", arr[i]);
+    }
     printf("\n");
 
     MPI_Barrier(MPI_COMM_WORLD);
@@ -61,56 +49,19 @@ int main(int argc, char *argv[])
 
     MPI_Scatter(arr, local_len, MPI_INT, local_arr, local_len, MPI_INT, 0, MPI_COMM_WORLD);
 
-    // Sort local array
-    for (i = 0; i < local_len; i++) {
-        t = local_arr[i];
-        c = 0;
-        while (t > 0) {
-            c++;
-            t = t / 10;
-        }
-        if (maxd < c)
-            maxd = c;
-        c = 0;
-    }
-    while (--maxd)
-        n = n * 10;
-
-    for (i = 0; i < local_len; i++) {
-        max = local_arr[i] / n;
-        t = i;
-
-        for (j = i + 1; j < local_len; j++) {
-            if (max > (local_arr[j] / n)) {
-                max = local_arr[j] / n;
-                t = j;
-            }
-        }
-
-        temp = local_arr[t];
-        local_arr[t] = local_arr[i];
-        local_arr[i] = temp;
-    }
-    while (n >= 1) {
-        for (i = 0; i < local_len;) {
-            t = local_arr[i] / n;
-            for (j = i + 1; t == (local_arr[j] / n); j++)
-                ;
-            arrangeItems(local_arr, local_arr, i, j);
-            i = j;
-        }
-        n = n / 10;
-    }
+    // Ordenar array local usando un simple método de ordenación
+    simpleSort(local_arr, local_len);
 
     MPI_Gather(local_arr, local_len, MPI_INT, arr1, local_len, MPI_INT, 0, MPI_COMM_WORLD);
 
     if (rank == 0) {
-        // Final sorting
-        arrangeItems(arr, arr1, 0, len);
+        // Ordenamiento final después de recoger los resultados
+        simpleSort(arr1, len);
 
         printf("Sorted Array:\n");
-        for (i = 0; i < len; i++)
+        for (i = 0; i < len; i++) {
             printf("%d ", arr1[i]);
+        }
         printf("\n");
     }
 
