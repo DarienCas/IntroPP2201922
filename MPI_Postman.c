@@ -20,6 +20,7 @@ void simpleSort(int arr[], int n) {
 int main(int argc, char *argv[]) {
     int rank, size;
     int i;
+    double start_time, end_time;
 
     MPI_Init(&argc, &argv);
     MPI_Comm_rank(MPI_COMM_WORLD, &rank);
@@ -36,13 +37,8 @@ int main(int argc, char *argv[]) {
         arr[i] = rand() % 100;  // Generar un número aleatorio entre 0 y 99
     }
 
-    printf("Process %d - Unsorted Array:\n", rank);
-    for (i = 0; i < len; i++) {
-        printf("%d ", arr[i]);
-    }
-    printf("\n");
-
-    MPI_Barrier(MPI_COMM_WORLD);
+    MPI_Barrier(MPI_COMM_WORLD);  // Sincronización antes de iniciar el temporizador
+    start_time = MPI_Wtime();  // Iniciar temporizador
 
     int local_len = len / size;
     int *local_arr = (int *)malloc(local_len * sizeof(int));
@@ -57,12 +53,18 @@ int main(int argc, char *argv[]) {
     if (rank == 0) {
         // Ordenamiento final después de recoger los resultados
         simpleSort(arr1, len);
+    }
 
+    MPI_Barrier(MPI_COMM_WORLD);  // Sincronización antes de detener el temporizador
+    end_time = MPI_Wtime();  // Detener temporizador
+
+    if (rank == 0) {
         printf("Sorted Array:\n");
         for (i = 0; i < len; i++) {
             printf("%d ", arr1[i]);
         }
         printf("\n");
+        printf("Execution time: %f seconds\n", end_time - start_time);
     }
 
     free(arr);
